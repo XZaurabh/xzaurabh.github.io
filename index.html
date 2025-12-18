@@ -1,45 +1,2494 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sourav Animation</title>
+    <title>Particle Life: 3D Universe</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap');
+
+        :root {
+            --bg-color: #252525;
+            --panel-bg: rgba(10, 15, 20, 0.95);
+            --text-color: #e0e0e0;
+            --accent-color: #00f3ff;
+            --secondary-accent: #ff0055;
+            --accent-glow: 0 0 10px rgba(0, 243, 255, 0.5);
+            --border: 1px solid rgba(0, 243, 255, 0.2);
+            --input-bg: rgba(255, 255, 255, 0.05);
+        }
+
         body {
             margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #121212;
+            padding: 0;
+            background-color: var(--bg-color);
             overflow: hidden;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--text-color);
+            user-select: none;
+            display: flex;
+            height: 100vh;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
+        /* Split Layout by Default */
+        #app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-container {
+            width: 340px;
+            /* Fixed width sidebar */
+            height: 100%;
+            background: var(--panel-bg);
+            border-right: 1px solid rgba(0, 243, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        #ui-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        #ui-scroll-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #ui-scroll-area::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        #ui-scroll-area::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: black;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        /* Stats */
+        #stats {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+            line-height: 1.6;
+            z-index: 20;
+        }
+
+        /* Components */
         h1 {
-            font-size: 5rem;
-            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            margin: 0 0 15px 0;
             text-transform: uppercase;
-            letter-spacing: 10px;
-            animation: float 3s ease-in-out infinite, colorChange 5s linear infinite;
+            letter-spacing: 1px;
+            color: var(--accent-color);
+            text-shadow: var(--accent-glow);
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+            padding-bottom: 10px;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-30px); }
+        h2 {
+            font-size: 1.0rem;
+            color: #fff;
+            margin: 15px 0 8px 0;
+            text-transform: uppercase;
+            border-left: 2px solid var(--accent-color);
+            padding-left: 8px;
+            font-weight: 700;
         }
 
-        @keyframes colorChange {
-            0% { color: #ff0055; text-shadow: 0 0 20px #ff0055; }
-            33% { color: #00fbff; text-shadow: 0 0 20px #00fbff; }
-            66% { color: #fffa00; text-shadow: 0 0 20px #fffa00; }
-            100% { color: #ff0055; text-shadow: 0 0 20px #ff0055; }
+        .control-group {
+            margin-bottom: 8px;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            color: #aaa;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 6px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            border-color: var(--accent-color);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 243, 255, 0.05);
+            border: var(--border);
+            color: var(--accent-color);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        button:hover {
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        button.active-shape {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+        /* Color Pickers */
+        .color-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 100%;
+            height: 25px;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+
+        /* Matrix */
+        .matrix-container {
+            display: grid;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .matrix-cell input[type="range"] {
+            height: 100%;
+            margin: 0;
+        }
+
+        .matrix-header-col,
+        .matrix-header-row {
+            border-radius: 2px;
+        }
+
+        .matrix-header-col {
+            height: 4px;
+            width: 100%;
+            margin-bottom: 2px;
+        }
+
+        .matrix-header-row {
+            width: 4px;
+            height: 100%;
+            position: absolute;
+            left: -6px;
+        }
+
+        .shortcut-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            pointer-events: none;
+            text-align: right;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            z-index: 100;
+        }
+
+        .shortcut-item {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 4px;
+            font-family: 'Rajdhani', monospace;
+        }
+
+        .shortcut-key {
+            color: var(--accent-color);
+            font-weight: bold;
+            display: inline-block;
+            min-width: 20px;
         }
     </style>
+    <!-- Import Maps -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
-<body>
 
-    <h1>Sourav</h1>
+<div id="error-console"
+    style="position:fixed; top:0; left:0; width:100%; height:50%; background:rgba(50,0,0,0.9); color:#ff5555; z-index:9999; padding:20px; overflow:auto; display:none; font-family:monospace; white-space:pre-wrap;">
+</div>
+<script>
+    window.onerror = function (msg, url, line, col, error) {
+        const div = document.getElementById('error-console');
+        div.style.display = 'block';
+        div.innerHTML += `[ERROR] ${msg}\nLine: ${line}:${col}\n${error ? error.stack : ''}\n\n`;
+        return false;
+    };
+    window.onunhandledrejection = function (e) {
+        const div = document.getElementById('error-console');
+        div.style.display = 'block';
+        div.innerHTML += `[PROMISE ERROR] ${e.reason}\n\n`;
+    };
+</script>
+<div id="app-container">
 
+    <div id="ui-container">
+        <div id="ui-scroll-area">
+            <h1>Particle Universe</h1>
+
+            <h2>Visuals</h2>
+            <div class="control-group">
+                <label>Bloom Glow: <span id="bloom-val">0.0</span></label>
+                <input type="range" id="param-bloom" min="0" max="4" step="0.1" value="0">
+            </div>
+            <label>Particle Colors (Types 1-4)</label>
+            <div class="color-row">
+                <input type="color" id="col-0" value="#ff0055">
+                <input type="color" id="col-1" value="#00ff55">
+                <input type="color" id="col-2" value="#0088ff">
+                <input type="color" id="col-3" value="#ffff00">
+            </div>
+
+            <h2>Studio Settings</h2>
+            <div class="control-group">
+                <label style="justify-content: flex-start; gap: 10px;">
+                    <input type="checkbox" id="check-shadows" checked>
+                    Enable Shadows
+                </label>
+            </div>
+            <div class="control-group">
+                <label style="justify-content: flex-start; gap: 10px;">
+                    <input type="checkbox" id="check-gravity">
+                    Gravity Mode (Drop)
+                </label>
+            </div>
+            <div class="control-group">
+                <label>Particle Size: <span id="size-val">1.0</span></label>
+                <input type="range" id="param-size" min="0.1" max="5.0" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <label>Shape Thickness: <span id="thick-val">0</span></label>
+                <input type="range" id="param-thick" min="0" max="100" step="1" value="0">
+            </div>
+
+            <h2>Formations</h2>
+            <div class="control-group">
+                <input type="text" id="text-input" placeholder="Type text..." maxlength="15">
+                <button id="btn-text">Generate Text</button>
+            </div>
+            <div class="btn-grid">
+                <button id="btn-shape-sphere">Sphere</button>
+                <button id="btn-shape-cube">Cube</button>
+                <button id="btn-shape-heart">Heart</button>
+                <button id="btn-shape-torus">Torus</button>
+                <button id="btn-shape-pyramid">Pyramid</button>
+                <button id="btn-shape-helix">Helix</button>
+                <button id="btn-shape-cylinder">Cylinder</button>
+                <button id="btn-shape-saturn">Saturn</button>
+                <button id="btn-shape-hourglass">Hourglass</button>
+                <button id="btn-shape-atom">Atom</button>
+                <!-- New Shapes -->
+                <button id="btn-shape-klein">Klein Bottle</button>
+                <button id="btn-shape-mobius">Mobius Strip</button>
+                <button id="btn-shape-torusknot">Torus Knot</button>
+                <button id="btn-shape-cone">Cone</button>
+                <button id="btn-shape-dodec">Dodecahedron</button>
+                <button id="btn-shape-icos">Icosahedron</button>
+                <button id="btn-shape-octa">Octahedron</button>
+                <button id="btn-shape-tetra">Tetrahedron</button>
+                <button id="btn-shape-hyper">Hyperboloid</button>
+                <button id="btn-shape-saddle">Saddle</button>
+                <button id="btn-shape-monkey">Monkey</button>
+                <button id="btn-shape-enneper">Enneper</button>
+                <button id="btn-shape-helicoid">Helicoid</button>
+                <button id="btn-shape-catenoid">Catenoid</button>
+                <button id="btn-shape-roman">Roman</button>
+                <button id="btn-shape-cross">Cross Cap</button>
+                <button id="btn-shape-dini">Dini</button>
+                <button id="btn-shape-corkscrew">Corkscrew</button>
+                <button id="btn-shape-wave">Wave</button>
+                <button id="btn-shape-bumpy">Bumpy</button>
+
+                <!-- Batch 2 Shapes-->
+                <button id="btn-shape-supertoroid">Super Toroid</button>
+                <button id="btn-shape-nautilus">Nautilus</button>
+                <button id="btn-shape-ufo">UFO</button>
+                <button id="btn-shape-mushroom">Mushroom</button>
+                <button id="btn-shape-star">Star 3D</button>
+                <button id="btn-shape-borromean">Borromean</button>
+                <button id="btn-shape-chain">Chain</button>
+                <button id="btn-shape-gear">Gear</button>
+                <button id="btn-shape-waffle">Waffle</button>
+                <button id="btn-shape-tunnel">Tunnel</button>
+                <button id="btn-shape-vortex">Vortex</button>
+                <button id="btn-shape-bowl">Bowl</button>
+                <button id="btn-shape-cup">Cup</button>
+                <button id="btn-shape-gem">Gem</button>
+                <button id="btn-shape-crystal">Crystal</button>
+                <button id="btn-shape-tent">Tent</button>
+                <button id="btn-shape-pillow">Pillow</button>
+                <button id="btn-shape-banana">Banana</button>
+                <button id="btn-shape-melon">Melon</button>
+                <button id="btn-shape-lemon">Lemon</button>
+
+                <!-- Batch 3 Shapes -->
+                <button id="btn-shape-trefoil">Trefoil</button>
+                <button id="btn-shape-figure8">Figure 8</button>
+                <button id="btn-shape-lissajous">Lissajous</button>
+                <button id="btn-shape-oloid">Oloid</button>
+                <button id="btn-shape-rocket">Rocket</button>
+                <button id="btn-shape-tree">Tree</button>
+                <button id="btn-shape-snowman">Snowman</button>
+                <button id="btn-shape-dumbbell">Dumbbell</button>
+                <button id="btn-shape-chair">Chair</button>
+                <button id="btn-shape-table">Table</button>
+                <button id="btn-shape-floor">Floor</button>
+                <button id="btn-shape-wall">Wall</button>
+                <button id="btn-shape-corner">Corner</button>
+                <button id="btn-shape-cross3d">Cross</button>
+                <button id="btn-shape-ring">Ring</button>
+                <button id="btn-shape-disc">Disc</button>
+                <button id="btn-shape-frame">Box Frame</button>
+                <button id="btn-shape-target">Target</button>
+                <button id="btn-shape-swirl">Swirl</button>
+                <button id="btn-shape-infinity">Infinity</button>
+
+                <button id="btn-shape-clear" style="grid-column: span 2;">Clear</button>
+            </div>
+            <div class="control-group">
+                <label>Formation Strength: <span id="form-val">0.5</span></label>
+                <input type="range" id="param-form" min="0" max="1" step="0.05" value="0.5">
+            </div>
+
+            <h2>Simulation</h2>
+            <div class="control-group">
+                <label>Preset</label>
+                <select id="preset-selector">
+                    <option value="random">Custom / Random</option>
+                    <option value="snake" selected>Neon Snakes</option>
+                    <option value="life">Star Life 3D</option>
+                    <option value="cell">Cellular Mitosis</option>
+                    <option value="swarm">Chaos Swarm</option>
+                    <option value="galaxy">Spiral Galaxy</option>
+                </select>
+            </div>
+            <div class="btn-grid">
+                <button id="btn-reset">Respawn</button>
+                <button id="btn-rules">Random Rules</button>
+            </div>
+
+            <h2>World Params</h2>
+            <div class="control-group">
+                <label>Particle Count: <span id="count-val">5000</span></label>
+                <input type="range" id="param-count" min="100" max="20000" step="100" value="5000">
+            </div>
+            <div class="control-group">
+                <label>Force Strength: <span id="force-val">1.0</span></label>
+                <input type="range" id="param-force" min="0.1" max="5" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+                <label>Interaction Radius: <span id="radius-val">30</span></label>
+                <input type="range" id="param-radius" min="10" max="200" step="1" value="30">
+            </div>
+            <div class="control-group">
+                <label>Friction: <span id="friction-val">0.90</span></label>
+                <input type="range" id="param-friction" min="0.50" max="0.99" step="0.01" value="0.90">
+            </div>
+
+            <h2>Particle Colors</h2>
+            <div class="control-group">
+                <label style="justify-content: flex-start; gap: 10px;">
+                    <input type="checkbox" id="check-global-color">
+                    Use Single Global Color
+                </label>
+                <input type="color" id="col-global" value="#00f3ff" style="width:100%; margin-top:5px; display:none;">
+            </div>
+            <div id="type-colors-container">
+                <div class="color-picker-row">
+                    <label>Type 1</label>
+                    <input type="color" id="col-0" value="#ff0055">
+                </div>
+                <div class="color-picker-row">
+                    <label>Type 2</label>
+                    <input type="color" id="col-1" value="#00f3ff">
+
+                </div>
+                <div class="color-picker-row">
+                    <label>Type 3</label>
+                    <input type="color" id="col-2" value="#00ff55">
+                </div>
+                <div class="color-picker-row">
+                    <label>Type 4</label>
+                    <input type="color" id="col-3" value="#ffff00">
+                </div>
+            </div>
+
+            <h2>Interaction Matrix</h2>
+            <div id="matrix-container" class="matrix-container"></div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="simCanvas"></canvas>
+        <div id="stats">
+            FPS: <span id="fps">60</span><br>
+            Left Drag: Rotate | Right Drag: Pan | Scroll: Zoom
+        </div>
+        <div class="shortcut-overlay">
+            <div class="shortcut-item"><span class="shortcut-key">Ctrl+D</span> Drop Mode</div>
+            <div class="shortcut-item"><span class="shortcut-key">R</span> Respawn</div>
+            <div class="shortcut-item"><span class="shortcut-key">Space</span> Pause</div>
+        </div>
+    </div>
+
+</div>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    // --- Globals ---
+    const $ = id => document.getElementById(id);
+    const canvas = $('simCanvas');
+    let scene, camera, renderer, composer, controls, bloomPass, instancedMesh, dirLight, floor;
+    const dummy = new THREE.Object3D();
+    const MAX_INSTANCES = 25000;
+
+    // Zoom State
+    let targetZoom = 1500;
+
+    // State
+    let COLORS_STR = ['#ff0055', '#00ff55', '#0088ff', '#ffff00'];
+    let THREE_COLORS = COLORS_STR.map(c => new THREE.Color(c));
+    let PARTICLES = [];
+    let RULES = [];
+    let spatialHash;
+    let TARGETS = [];
+    let ORIGINAL_TARGETS = [];
+
+    const config = {
+        count: 5000,
+        types: 4,
+        radius: 50,
+        beta: 0.3,
+        friction: 0.90,
+        forceFactor: 1.0,
+        timeScale: 1.0,
+        boundary: 'bounce',
+        formationStrength: 0.5,
+        dt: 1.0,
+        bloomStrength: 0.0,
+        dt: 1.0,
+        bloomStrength: 0.0,
+        worldSize: 2000,
+        shadows: true,
+        particleSize: 1.0,
+        thickness: 0,
+        gravityMode: false,
+        gravity: 0.5,
+        floorY: -500 // Slightly lower than visual floor to account for size? No, visual is -400.
+    };
+
+    // --- Shape Engine (Structured & Deterministic) ---
+    const ShapeEngine = {
+        // Helper: Downsample or Upsample points to match Config.Count
+        samplePoints: (points) => {
+            if (points.length === 0) return [];
+            const res = [];
+            // If we have fewer points than needed, we cycle (this is default behavior elsewhere, but good to be explicit)
+            // If we have MORE, we need to pick evenly
+            if (points.length > config.count) {
+                const step = points.length / config.count;
+                for (let i = 0; i < config.count; i++) {
+                    res.push(points[Math.floor(i * step)]);
+                }
+                return res;
+            }
+            return points;
+        },
+
+        scanText: (text) => {
+            const offC = document.createElement('canvas');
+            const offCtx = offC.getContext('2d');
+            // Dynamic Sizing
+            const fontSize = 200;
+            offCtx.font = `bold ${fontSize}px 'Orbitron', Arial`;
+            const metrics = offCtx.measureText(text);
+            const w = Math.ceil(metrics.width) + 200;
+            const h = 500;
+            offC.width = w; offC.height = h;
+
+            offCtx.font = `bold ${fontSize}px 'Orbitron', Arial`;
+            offCtx.fillStyle = 'white';
+            offCtx.textAlign = 'center';
+            offCtx.textBaseline = 'middle';
+            offCtx.fillText(text, w / 2, h / 2);
+
+            const idata = offCtx.getImageData(0, 0, w, h).data;
+            const points = [];
+            const step = 6; // High res scan
+
+            for (let y = 0; y < h; y += step) {
+                for (let x = 0; x < w; x += step) {
+                    const idx = (y * w + x) * 4;
+                    if (idata[idx] > 128) {
+                        points.push({
+                            x: (x - w / 2) * 3,
+                            y: (h / 2 - y) * 3,
+                            z: 0
+                        });
+                        // Thickness
+                        points.push({ x: (x - w / 2) * 3, y: (h / 2 - y) * 3, z: 20 });
+                        points.push({ x: (x - w / 2) * 3, y: (h / 2 - y) * 3, z: -20 });
+                    }
+                }
+            }
+            // Downsample to fit exactly
+            return ShapeEngine.samplePoints(points);
+        },
+
+        getSphere: () => {
+            const pts = []; const r = 300;
+            const phi = (Math.sqrt(5) + 1) / 2 - 1;
+            for (let i = 0; i < config.count; i++) {
+                const longitude = phi * 2 * Math.PI * i;
+                const z = 1 - (2 * i) / (config.count - 1);
+                const radius = Math.sqrt(1 - z * z);
+                pts.push({ x: r * Math.cos(longitude) * radius, y: r * Math.sin(longitude) * radius, z: r * z });
+            }
+            return pts;
+        },
+
+        getCube: () => {
+            const pts = []; const size = 450; const half = size / 2;
+            const particlesPerFace = Math.floor(config.count / 6);
+            const gridDim = Math.floor(Math.sqrt(particlesPerFace));
+            const faces = [
+                { u: 'y', v: 'z', w: 'x', s: 1 }, { u: 'y', v: 'z', w: 'x', s: -1 },
+                { u: 'x', v: 'z', w: 'y', s: 1 }, { u: 'x', v: 'z', w: 'y', s: -1 },
+                { u: 'x', v: 'y', w: 'z', s: 1 }, { u: 'x', v: 'y', w: 'z', s: -1 }
+            ];
+            for (let f = 0; f < 6; f++) {
+                for (let i = 0; i < gridDim; i++) {
+                    for (let j = 0; j < gridDim; j++) {
+                        const u = (i / gridDim) * size - half;
+                        const v = (j / gridDim) * size - half;
+                        const p = { x: 0, y: 0, z: 0 };
+                        p[faces[f].u] = u; p[faces[f].v] = v; p[faces[f].w] = half * faces[f].s;
+                        pts.push(p);
+                    }
+                }
+            }
+            return pts;
+        },
+
+        getHeart: () => {
+            const pts = [];
+            const steps = config.count;
+            for (let i = 0; i < steps; i++) {
+                // Layered parametric
+                // Modulo i to ensure full loop coverage even if count is low
+                const range = Math.min(steps, 500); // 500 pts for full heart loop
+                const t2 = i / (range || 1) * Math.PI * 2 * 3; // multiple loops
+
+                const x = 16 * Math.pow(Math.sin(t2), 3);
+                const y = 13 * Math.cos(t2) - 5 * Math.cos(2 * t2) - 2 * Math.cos(3 * t2) - Math.cos(4 * t2);
+                const z = (i / steps - 0.5) * 100;
+                pts.push({ x: x * 15, y: y * 15, z: z });
+            }
+            return pts;
+        },
+
+        getTorus: () => {
+            const pts = []; const R = 300; const maxR = 130;
+            // Nested shells for structured volume
+            const layers = 8;
+            for (let l = 1; l <= layers; l++) {
+                const r = (l / layers) * maxR;
+                // Circumference of major ring = 2*PI*R
+                // Circumference of minor ring = 2*PI*r
+                // density heuristic
+                const shellCount = Math.floor(config.count * (l / layers) / ((layers + 1) / 2));
+                // Simple distribution
+                const width = Math.ceil(Math.sqrt(shellCount * (R / r)));
+                const height = Math.ceil(shellCount / width);
+
+                for (let i = 0; i < shellCount; i++) {
+                    const u = (i % width) / width * Math.PI * 2;
+                    const v = (Math.floor(i / width) / width) * Math.PI * 2;
+                    pts.push({
+                        x: (R + r * Math.cos(v)) * Math.cos(u),
+                        y: r * Math.sin(v),
+                        z: (R + r * Math.cos(v)) * Math.sin(u)
+                    });
+                }
+            }
+            // Fill remainder if any
+            return ShapeEngine.samplePoints(pts);
+        },
+
+        getPyramid: () => {
+            const pts = []; const h = 500; const base = 500; const layers = 30;
+            const subCount = Math.floor(config.count / layers);
+            for (let l = 0; l < layers; l++) {
+                // Inverted: start large at top? No, user wants upside down.
+                // Standard was tip up. Upside down means tip down.
+                // Previous: y = (l / layers) * h - h / 2; (Bottom to top)
+                // New: Flip Y.
+                const y = -((l / layers) * h - h / 2);
+                const size = base * (1 - l / layers);
+                if (size <= 1) continue;
+                for (let k = 0; k < subCount; k++) {
+                    const p = (k / subCount) * 4;
+                    let px = 0, pz = 0;
+                    if (p < 1) { px = size / 2; pz = (p - 0.5) * size; }
+                    else if (p < 2) { px = (1.5 - p) * size; pz = size / 2; }
+                    else if (p < 3) { px = -size / 2; pz = (2.5 - p) * size; }
+                    else { px = (p - 3.5) * size; pz = -size / 2; }
+                    pts.push({ x: px, y: y, z: pz }); // y is flipped
+                }
+            }
+            return pts;
+        },
+
+        getHelix: () => {
+            const pts = []; const r = 200; const h = 800; const loops = 4;
+            for (let i = 0; i < config.count; i++) {
+                const p = i / config.count;
+                const angle = p * Math.PI * 2 * loops;
+                const x = r * Math.cos(angle);
+                const z = r * Math.sin(angle);
+                const y = (p - 0.5) * h;
+                pts.push({ x, y, z });
+                pts.push({ x: -x, y, z: -z });
+            }
+            return pts;
+        },
+
+        getCylinder: () => {
+            const pts = []; const r = 250; const h = 600;
+            for (let i = 0; i < config.count; i++) {
+                // Continuous spiral stack
+                const p = i / config.count;
+                const y = (p - 0.5) * h;
+                const angle = p * Math.PI * 2 * 20; // 20 winds
+                pts.push({ x: r * Math.cos(angle), y: y, z: r * Math.sin(angle) });
+            }
+            return pts;
+        },
+
+        getSaturn: () => {
+            const pts = [];
+            const sphereCount = Math.floor(config.count * 0.4);
+            const ringCount = config.count - sphereCount;
+            const phi = (Math.sqrt(5) + 1) / 2 - 1;
+            for (let i = 0; i < sphereCount; i++) {
+                const lon = phi * 2 * Math.PI * i;
+                const z = 1 - (2 * i) / (sphereCount - 1 || 1);
+                const rad = Math.sqrt(1 - z * z);
+                pts.push({ x: 180 * Math.cos(lon) * rad, y: 180 * Math.sin(lon) * rad, z: 180 * z });
+            }
+            const loops = 15;
+            const minR = 250; const maxR = 450;
+            for (let i = 0; i < ringCount; i++) {
+                const p = i / ringCount;
+                const angle = p * Math.PI * 2 * loops * 5;
+                const r = minR + p * (maxR - minR);
+                const y = Math.sin(angle * 3) * 5;
+                pts.push({ x: r * Math.cos(angle), y: y, z: r * Math.sin(angle) });
+            }
+            return pts;
+        },
+
+        getHourglass: () => {
+            const pts = []; const h = 300; const r = 250;
+            const loops = 15;
+            for (let i = 0; i < config.count; i++) {
+                const p = i / config.count;
+                const y = (p - 0.5) * h * 2;
+                const s = Math.abs(y) / h;
+                const angle = p * Math.PI * 2 * loops * 5;
+                const rad = 10 + (s * s * r);
+                pts.push({ x: rad * Math.cos(angle), y: y, z: rad * Math.sin(angle) });
+            }
+            return pts;
+        },
+
+        getAtom: () => {
+            const pts = [];
+            // Adaptive counts
+            const nN = Math.floor(config.count * 0.25); // 25% Nucleus
+            const side = Math.cbrt(nN);
+            const step = 60 / (side || 1);
+
+            // Nucleus - randomize or cube fill? Spiral better for low count
+            // Spiral Sphere Nucleus
+            const phi = (Math.sqrt(5) + 1) / 2 - 1;
+            for (let i = 0; i < nN; i++) {
+                const lon = phi * 2 * Math.PI * i;
+                const z = 1 - (2 * i) / (nN - 1 || 1);
+                const rad = Math.sqrt(1 - z * z) * 60; // 60 size
+                pts.push({ x: Math.cos(lon) * rad, y: Math.sin(lon) * rad, z: z * 60 });
+            }
+
+            // Electrons
+            const orbitCount = (config.count - nN) / 3;
+            [0, Math.PI / 3, -Math.PI / 3].forEach(offset => {
+                for (let i = 0; i < orbitCount; i++) {
+                    const angle = (i / orbitCount) * Math.PI * 2;
+                    const x = 350 * Math.cos(angle);
+                    const y = 350 * Math.sin(angle);
+                    const z = 0;
+                    const rx = x;
+                    const ry = y * Math.cos(offset) - z * Math.sin(offset);
+                    const rz = y * Math.sin(offset) + z * Math.cos(offset);
+                    pts.push({ x: rx, y: ry, z: rz });
+                }
+            });
+            return pts;
+        },
+
+        getKleinBottle: () => {
+            const pts = []; const scale = 30;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = (i % side) / side * Math.PI;
+                const v = Math.floor(i / side) / side * 2 * Math.PI;
+                const x = -2 / 15 * Math.cos(u) * (3 * Math.cos(v) - 30 * Math.sin(u) + 90 * Math.pow(Math.cos(u), 4) * Math.sin(u) - 60 * Math.pow(Math.cos(u), 6) * Math.sin(u) + 5 * Math.cos(u) * Math.cos(v) * Math.sin(u));
+                const y = -1 / 15 * Math.sin(u) * (3 * Math.cos(v) - 3 * Math.pow(Math.cos(u), 2) * Math.cos(v) - 48 * Math.pow(Math.cos(u), 4) * Math.cos(v) + 48 * Math.pow(Math.cos(u), 6) * Math.cos(v) - 60 * Math.sin(u) + 5 * Math.cos(u) * Math.cos(v) * Math.sin(u) - 5 * Math.pow(Math.cos(u), 3) * Math.cos(v) * Math.sin(u) - 80 * Math.pow(Math.cos(u), 5) * Math.cos(v) * Math.sin(u) + 80 * Math.pow(Math.cos(u), 7) * Math.cos(v) * Math.sin(u));
+                const z = 2 / 15 * (3 + 5 * Math.cos(u) * Math.sin(u)) * Math.sin(v);
+                pts.push({ x: x * scale * 4, y: y * scale * 4, z: z * scale * 4 });
+            }
+            return pts;
+        },
+
+        getMobiusStrip: () => {
+            const pts = []; const scale = 200;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = (i % side) / side * 2 * Math.PI;
+                const v = (Math.floor(i / side) / side * 2) - 1; // -1 to 1
+                const x = scale * (1 + v / 2 * Math.cos(u / 2)) * Math.cos(u);
+                const y = scale * (1 + v / 2 * Math.cos(u / 2)) * Math.sin(u);
+                const z = scale * v / 2 * Math.sin(u / 2);
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getTorusKnot: () => {
+            const pts = []; const scale = 120;
+            const p = 3; const q = 7;
+            for (let i = 0; i < config.count; i++) {
+                const t = (i / config.count) * 2 * Math.PI * 10; // multiple winds
+                const r = Math.cos(q * t) + 2;
+                const x = scale * r * Math.cos(p * t);
+                const y = scale * r * Math.sin(p * t);
+                const z = -scale * Math.sin(q * t);
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getCone: () => {
+            const pts = []; const h = 600; const r = 300;
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count;
+                const angle = t * Math.PI * 40;
+                const curH = t * h;
+                const curR = (1 - t) * r;
+                pts.push({
+                    x: curR * Math.cos(angle),
+                    y: curH - h / 2,
+                    z: curR * Math.sin(angle)
+                });
+            }
+            return pts;
+        },
+
+        getDodecahedron: () => {
+            const pts = [];
+            const phi = (1 + Math.sqrt(5)) / 2;
+            const size = 300;
+            // Approx by sampling around vertices
+            const verts = [
+                // (±1, ±1, ±1)
+                { x: 1, y: 1, z: 1 }, { x: 1, y: 1, z: -1 }, { x: 1, y: -1, z: 1 }, { x: 1, y: -1, z: -1 },
+                { x: -1, y: 1, z: 1 }, { x: -1, y: 1, z: -1 }, { x: -1, y: -1, z: 1 }, { x: -1, y: -1, z: -1 },
+                // (0, ±1/phi, ±phi)
+                { x: 0, y: 1 / phi, z: phi }, { x: 0, y: 1 / phi, z: -phi }, { x: 0, y: -1 / phi, z: phi }, { x: 0, y: -1 / phi, z: -phi },
+                // (±1/phi, ±phi, 0)
+                { x: 1 / phi, y: phi, z: 0 }, { x: 1 / phi, y: -phi, z: 0 }, { x: -1 / phi, y: phi, z: 0 }, { x: -1 / phi, y: -phi, z: 0 },
+                // (±phi, 0, ±1/phi)
+                { x: phi, y: 0, z: 1 / phi }, { x: phi, y: 0, z: -1 / phi }, { x: -phi, y: 0, z: 1 / phi }, { x: -phi, y: 0, z: -1 / phi },
+            ].map(v => ({ x: v.x * size, y: v.y * size, z: v.z * size }));
+
+            for (let i = 0; i < config.count; i++) {
+                const a = verts[i % verts.length];
+                const b = verts[(i * 7) % verts.length]; // Mix
+                const t = Math.random();
+                pts.push({
+                    x: a.x + (b.x - a.x) * t * 0.2, // clusters at corners
+                    y: a.y + (b.y - a.y) * t * 0.2,
+                    z: a.z + (b.z - a.z) * t * 0.2
+                });
+            }
+            return pts;
+        },
+
+        getIcosahedron: () => {
+            const pts = []; const phi = (1 + Math.sqrt(5)) / 2; const size = 300;
+            // Vertices
+            const verts = [];
+            [[0, 1, phi], [0, 1, -phi], [0, -1, phi], [0, -1, -phi],
+            [1, phi, 0], [1, -phi, 0], [-1, phi, 0], [-1, -phi, 0],
+            [phi, 0, 1], [phi, 0, -1], [-phi, 0, 1], [-phi, 0, -1]].forEach(v => {
+                verts.push({ x: v[0] * size, y: v[1] * size, z: v[2] * size });
+            });
+            for (let i = 0; i < config.count; i++) {
+                const v = verts[i % verts.length];
+                // Fuzz
+                pts.push({ x: v.x + (Math.random() - 0.5) * 50, y: v.y + (Math.random() - 0.5) * 50, z: v.z + (Math.random() - 0.5) * 50 });
+            }
+            return pts;
+        },
+
+        getOctahedron: () => {
+            const pts = []; const s = 350;
+            const verts = [
+                { x: s, y: 0, z: 0 }, { x: -s, y: 0, z: 0 }, { x: 0, y: s, z: 0 },
+                { x: 0, y: -s, z: 0 }, { x: 0, y: 0, z: s }, { x: 0, y: 0, z: -s }
+            ];
+            for (let i = 0; i < config.count; i++) {
+                const a = verts[Math.floor(Math.random() * 6)];
+                const b = verts[Math.floor(Math.random() * 6)];
+                const t = Math.random(); // Edges and faces?
+                pts.push({
+                    x: a.x + (b.x - a.x) * t,
+                    y: a.y + (b.y - a.y) * t,
+                    z: a.z + (b.z - a.z) * t
+                });
+            }
+            return pts;
+        },
+
+        getTetrahedron: () => {
+            const pts = []; const s = 350;
+            const verts = [
+                { x: s, y: s, z: s }, { x: -s, y: -s, z: s }, { x: -s, y: s, z: -s }, { x: s, y: -s, z: -s }
+            ];
+            for (let i = 0; i < config.count; i++) {
+                const a = verts[Math.floor(Math.random() * 4)];
+                const b = verts[Math.floor(Math.random() * 4)];
+                const t = Math.random();
+                pts.push({
+                    x: a.x + (b.x - a.x) * t,
+                    y: a.y + (b.y - a.y) * t,
+                    z: a.z + (b.z - a.z) * t
+                });
+            }
+            return pts;
+        },
+
+        getHyperboloid: () => {
+            const pts = []; const a = 200; const b = 200; const c = 200;
+            for (let i = 0; i < config.count; i++) {
+                const u = (i / config.count) * 2 * Math.PI * 10;
+                const v = (i / config.count * 2 - 1) * 2;
+                // x^2/a^2 + y^2/b^2 - z^2/c^2 = 1 (One sheet)
+                const x = a * Math.sqrt(1 + v * v) * Math.cos(u);
+                const y = b * Math.sqrt(1 + v * v) * Math.sin(u);
+                const z = c * v;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getSaddle: () => { // Hyperbolic Paraboloid
+            const pts = []; const scale = 300;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = (i % side) / side * 2 - 1;
+                const v = Math.floor(i / side) / side * 2 - 1;
+                const x = u * scale;
+                const z = v * scale;
+                const y = (u * u - v * v) * scale / 2;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getMonkeySaddle: () => {
+            const pts = []; const scale = 150;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = (i % side) / side * 4 - 2;
+                const v = Math.floor(i / side) / side * 4 - 2;
+                const x = u * scale;
+                const z = v * scale;
+                const y = (u * u * u - 3 * u * v * v) * scale / 5;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getEnneper: () => {
+            const pts = []; const scale = 100;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = ((i % side) / side * 4 - 2) * 1.3;
+                const v = (Math.floor(i / side) / side * 4 - 2) * 1.3;
+                const x = scale * (u - u * u * u / 3 + u * v * v);
+                const y = -scale * (v - v * v * v / 3 + v * u * u);
+                const z = scale * (u * u - v * v);
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getHelicoid: () => {
+            const pts = []; const scale = 300;
+            for (let i = 0; i < config.count; i++) {
+                const u = (i / config.count) * 6 * Math.PI; // height
+                const v = (Math.random() * 2 - 1); // width
+                const x = scale * v * Math.cos(u);
+                const z = scale * v * Math.sin(u);
+                const y = (u - 3 * Math.PI) * 100;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getCatenoid: () => {
+            const pts = []; const c = 150;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = (i % side) / side * 2 * Math.PI;
+                const v = (Math.floor(i / side) / side * 3 - 1.5);
+                const x = c * Math.cosh(v) * Math.cos(u);
+                const z = c * Math.cosh(v) * Math.sin(u);
+                const y = c * v * 2;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getRoman: () => {
+            const pts = []; const r = 300;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = (i % side) / side * 2 * Math.PI;
+                const v = Math.floor(i / side) / side * Math.PI;
+                const x = r * Math.pow(Math.sin(2 * u), 2) * Math.pow(Math.sin(v), 2); // Approximation of shape
+                // Steiner surface var
+                const x2 = r * Math.sin(2 * u) * Math.pow(Math.cos(v), 2);
+                const y2 = r * Math.sin(u) * Math.sin(2 * v);
+                const z2 = r * Math.cos(u) * Math.sin(2 * v);
+                pts.push({ x: x2, y: y2, z: z2 });
+            }
+            return pts;
+        },
+
+        getCrossCap: () => {
+            const pts = []; const r = 300;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const u = (i % side) / side * Math.PI;
+                const v = Math.floor(i / side) / side * 2 * Math.PI;
+                const x = r * Math.sin(u) * Math.sin(2 * v);
+                const y = r * Math.sin(2 * u) * Math.cos(v) * Math.cos(v);
+                const z = r * Math.cos(2 * u) * Math.cos(v) * Math.cos(v);
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getDini: () => {
+            const pts = []; const a = 200; const b = 40;
+            for (let i = 0; i < config.count; i++) {
+                const u = (i / config.count) * 6 * Math.PI;
+                const v = Math.random() + 0.1; // 0.1 to 1.1
+                const x = a * Math.cos(u) * Math.sin(v);
+                const z = a * Math.sin(u) * Math.sin(v);
+                const y = a * (Math.cos(v) + Math.log(Math.tan(v / 2))) + b * u - 500;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getCorkscrew: () => {
+            const pts = []; const r = 200; const R = 40;
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 10 * Math.PI;
+                const x = r * Math.cos(t) + R * Math.cos(10 * t);
+                const z = r * Math.sin(t) + R * Math.sin(10 * t);
+                const y = (t - 5 * Math.PI) * 40;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getWave: () => {
+            const pts = []; const s = 800;
+            const side = Math.ceil(Math.sqrt(config.count));
+            for (let i = 0; i < config.count; i++) {
+                const x = (i % side) / side * s - s / 2;
+                const z = Math.floor(i / side) / side * s - s / 2;
+                const d = Math.sqrt(x * x + z * z);
+                const y = Math.sin(d / 50) * 50;
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getBumpy: () => {
+            const pts = []; const r = 350;
+            const phi = (Math.sqrt(5) + 1) / 2 - 1;
+            for (let i = 0; i < config.count; i++) {
+                const lon = phi * 2 * Math.PI * i;
+                const z = 1 - (2 * i) / (config.count - 1);
+                const rad = Math.sqrt(1 - z * z);
+
+                // bump logic
+                const theta = Math.acos(z);
+                // spherical harmonics approx or just noise
+                const bump = 1 + 0.2 * Math.sin(10 * lon) * Math.sin(10 * theta);
+
+                pts.push({
+                    x: r * bump * Math.cos(lon) * rad,
+                    y: r * bump * Math.sin(lon) * rad,
+                    z: r * bump * z
+                });
+            }
+            return pts;
+        },
+
+        getSuperToroid: () => {
+            const pts = []; const R = 300; const r = 120; const s = 1; // squareness
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.random() * Math.PI * 2;
+                // Superformula approx: sign(cos)*abs(cos)^s
+                const cU = Math.sign(Math.cos(u)) * Math.pow(Math.abs(Math.cos(u)), s);
+                const sU = Math.sign(Math.sin(u)) * Math.pow(Math.abs(Math.sin(u)), s);
+                const cV = Math.sign(Math.cos(v)) * Math.pow(Math.abs(Math.cos(v)), s);
+                const sV = Math.sign(Math.sin(v)) * Math.pow(Math.abs(Math.sin(v)), s);
+
+                const x = (R + r * cV) * cU;
+                const y = r * sV;
+                const z = (R + r * cV) * sU;
+                // Rotate to lie flat? y is minor axis height.
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getNautilus: () => {
+            const pts = [];
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 6 * Math.PI; // Spiral length
+                const scale = Math.exp(0.12 * t);
+                const rad = 20 * scale;
+
+                // Spiral Tube
+                const u = Math.random() * Math.PI * 2;
+                const tubeR = rad * 0.8;
+
+                const cx = rad * Math.cos(t);
+                const kz = rad * Math.sin(t);
+                const cy = -scale * 20;
+
+                const x = cx + tubeR * Math.cos(u) * Math.cos(t);
+                const z = kz + tubeR * Math.cos(u) * Math.sin(t);
+                const y = cy + tubeR * Math.sin(u);
+
+                pts.push({ x, y: y + 400, z }); // shift up
+            }
+            return pts;
+        },
+
+        getUFO: () => {
+            const pts = [];
+            const bodyCount = Math.floor(config.count * 0.7);
+            const domeCount = config.count - bodyCount;
+            // Disc Body
+            for (let i = 0; i < bodyCount; i++) {
+                const t = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * 400; // 400 radius
+                const h = 50 * Math.cos((r / 400) * Math.PI * 2); // Taper edge
+                pts.push({ x: r * Math.cos(t), y: h, z: r * Math.sin(t) });
+            }
+            // Dome
+            for (let i = 0; i < domeCount; i++) {
+                const t = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * 120;
+                const h = 50 + 100 * Math.sqrt(1 - (r / 120) * (r / 120)); // Hemisphere
+                pts.push({ x: r * Math.cos(t), y: h, z: r * Math.sin(t) });
+            }
+            return pts;
+        },
+
+        getMushroom: () => {
+            const pts = [];
+            const capCount = Math.floor(config.count * 0.6);
+            const stemCount = config.count - capCount;
+            // Cap
+            for (let i = 0; i < capCount; i++) {
+                const t = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * 250;
+                // Parabola cap
+                const h = 200 - (r * r) / 250 * 0.8;
+                pts.push({ x: r * Math.cos(t), y: h + 100, z: r * Math.sin(t) });
+            }
+            // Stem
+            for (let i = 0; i < stemCount; i++) {
+                const t = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * 60;
+                const h = (Math.random()) * 300 - 150;
+                pts.push({ x: r * Math.cos(t), y: h, z: r * Math.sin(t) });
+            }
+            return pts;
+        },
+
+        getStar: () => {
+            const pts = []; const R = 350; const r = 140;
+            for (let i = 0; i < config.count; i++) {
+                // 3D Star: just points on lines from center?
+                // Or a stellated polyhedron.
+                // Let's do a spiky ball.
+                const theta = Math.acos(2 * Math.random() - 1);
+                const phi = Math.random() * 2 * Math.PI;
+                // Perturb radius
+                const freq = 5;
+                const spike = 1 + 0.6 * Math.sin(freq * theta) * Math.sin(freq * phi);
+                const rad = R * spike;
+                pts.push({
+                    x: rad * Math.sin(theta) * Math.cos(phi),
+                    y: rad * Math.sin(theta) * Math.sin(phi),
+                    z: rad * Math.cos(theta)
+                });
+            }
+            return pts;
+        },
+
+        getBorromean: () => {
+            const pts = []; const R = 150; const r = 30; // 3 ellipses
+            // Ring 1: XY flat stretched X
+            // Ring 2: YZ flat stretched Y
+            // Ring 3: ZX flat stretched Z -- interlocking is tricky with simple ellipses.
+            // Standard parametric Borromean:
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 2 * Math.PI * 3; // 3 parts
+                let x, y, z;
+                const part = Math.floor(Math.random() * 3);
+                const ang = Math.random() * Math.PI * 2;
+
+                if (part === 0) { // Ring 1
+                    x = 100 * Math.cos(ang); y = 250 * Math.sin(ang); z = 0;
+                    // This is too simple. Use Seifert surface or just 3 linked tori.
+                    // 3 Linked Tori
+                    const tr = 110; const tR = 250;
+                    x = (tR + tr * Math.cos(ang)) * Math.cos(0); // Flat?
+                    // Let's do strictly orthogonal linked rings
+                    x = (tR + tr * Math.cos(ang)) * Math.cos(ang * 0);
+                    y = tr * Math.sin(ang);
+                    z = (tR + tr * Math.cos(ang)) * Math.sin(ang * 0 + Math.PI / 2); // ?? 
+                }
+                // Simpler: 3 Orthogonal Tori shifted
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.random() * Math.PI * 2;
+                const minR = 40; const majR = 180;
+
+                if (part === 0) { // XY plane
+                    x = (majR + minR * Math.cos(v)) * Math.cos(u);
+                    y = (majR / 2 + minR * Math.cos(v)) * Math.sin(u); // Squashed
+                    z = minR * Math.sin(v) + ((u > 0 && u < Math.PI) ? 40 : -40); // Warp??
+                    // Fallback: 3 regular tori offsets
+                    x = (majR + minR * Math.cos(v)) * Math.cos(u);
+                    y = (majR + minR * Math.cos(v)) * Math.sin(u);
+                    z = minR * Math.sin(v);
+                } else if (part === 1) { // YZ plane
+                    y = (majR + minR * Math.cos(v)) * Math.cos(u) + 120; // Shifted
+                    z = (majR + minR * Math.cos(v)) * Math.sin(u);
+                    x = minR * Math.sin(v);
+                } else { // ZX plane
+                    z = (majR + minR * Math.cos(v)) * Math.cos(u) - 120;
+                    x = (majR + minR * Math.cos(v)) * Math.sin(u);
+                    y = minR * Math.sin(v);
+                }
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+
+        getChain: () => {
+            const pts = []; const linkCount = 5;
+            const R = 80; const r = 20; const sep = 110;
+            for (let i = 0; i < config.count; i++) {
+                const link = Math.floor(Math.random() * linkCount);
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.random() * Math.PI * 2;
+
+                // Alternating orientation
+                let lx, ly, lz;
+                if (link % 2 === 0) { // Flat XZ
+                    lx = (R + r * Math.cos(v)) * Math.cos(u);
+                    lz = (R + r * Math.cos(v)) * Math.sin(u);
+                    ly = r * Math.sin(v);
+                } else { // Standing YZ
+                    ly = (R + r * Math.cos(v)) * Math.cos(u);
+                    lz = (R + r * Math.cos(v)) * Math.sin(u);
+                    lx = r * Math.sin(v);
+                }
+                pts.push({ x: lx + (link - 2) * sep, y: ly, z: lz });
+            }
+            return pts;
+        },
+
+        getGear: () => {
+            const pts = []; const R = 300; const dent = 40; const teeth = 10;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                // Gear radius varies with angle
+                const modR = R + (Math.sin(u * teeth) > 0 ? dent : -dent);
+                const r = Math.sqrt(Math.random()) * modR;
+                const h = 50 * (Math.random() - 0.5);
+                pts.push({ x: r * Math.cos(u), y: h, z: r * Math.sin(u) });
+            }
+            return pts;
+        },
+
+        getWaffle: () => { // Grid
+            const pts = []; const s = 800; const lines = 20;
+            const step = s / lines;
+            for (let i = 0; i < config.count; i++) {
+                // Distribute on grid lines
+                const p = Math.random();
+                const axis = Math.random() > 0.5 ? 'x' : 'z';
+                const lineIdx = Math.floor(Math.random() * lines);
+                const pos = (lineIdx / (lines - 1)) * s - s / 2;
+                const val = (p - 0.5) * s;
+
+                if (axis === 'x') pts.push({ x: val, y: 0, z: pos });
+                else pts.push({ x: pos, y: 0, z: val });
+            }
+            return pts;
+        },
+
+        getTunnel: () => { // Infinite cylinder visually
+            const pts = []; const R = 400; const L = 2000;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const z = (Math.random() - 0.5) * L;
+                pts.push({ x: R * Math.cos(u), y: R * Math.sin(u), z: z });
+            }
+            return pts;
+        },
+
+        getVortex: () => {
+            const pts = []; const h = 800;
+            for (let i = 0; i < config.count; i++) {
+                const y = (Math.random() - 0.5) * h;
+                const u = Math.random() * Math.PI * 4 + (y / 100); // Twist
+                const r = 100 + Math.abs(y) * 0.5;
+                pts.push({ x: r * Math.cos(u), y: y, z: r * Math.sin(u) });
+            }
+            return pts;
+        },
+
+        getBowl: () => {
+            const pts = []; const R = 350;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const r = Math.sqrt(Math.random()) * R;
+                const h = (r * r) / 300;
+                pts.push({ x: r * Math.cos(u), y: h - 150, z: r * Math.sin(u) });
+            }
+            return pts;
+        },
+
+        getCup: () => {
+            const pts = []; const R = 200; const H = 300;
+            // Cylinder + handle
+            const cupCount = Math.floor(config.count * 0.85);
+            for (let i = 0; i < cupCount; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const h = (Math.random() - 0.5) * H;
+                // Wall
+                pts.push({ x: R * Math.cos(u), y: h, z: R * Math.sin(u) });
+            }
+            // Handle
+            for (let i = 0; i < config.count - cupCount; i++) {
+                const t = i / (config.count - cupCount) * Math.PI;
+                const hr = 100;
+                pts.push({ x: R + hr * Math.sin(t), y: 50 + hr * Math.cos(t), z: 0 });
+            }
+            return pts;
+        },
+
+        getGem: () => { // Bipyramid octahedron ish but taller
+            const pts = []; const R = 250; const H = 300;
+            for (let i = 0; i < config.count; i++) {
+                const y = (Math.random() - 0.5) * 2 * H;
+                const r = R * (1 - Math.abs(y) / H);
+                const u = Math.floor(Math.random() * 8) / 8 * Math.PI * 2; // Facets
+                // Fill facets
+                const p1 = { x: r * Math.cos(u), z: r * Math.sin(u) };
+                const p2 = { x: r * Math.cos(u + Math.PI / 4), z: r * Math.sin(u + Math.PI / 4) };
+                const t = Math.random();
+                pts.push({ x: p1.x + (p2.x - p1.x) * t, y: y, z: p1.z + (p2.z - p1.z) * t });
+            }
+            return pts;
+        },
+
+        getCrystal: () => { // Cluster of columns
+            const pts = [];
+            const pillars = 10;
+            const sub = Math.floor(config.count / pillars);
+            for (let p = 0; p < pillars; p++) {
+                const ox = (Math.random() - 0.5) * 300;
+                const oz = (Math.random() - 0.5) * 300;
+                const h = 200 + Math.random() * 300;
+                const w = 20 + Math.random() * 30;
+                const tiltX = (Math.random() - 0.5) * 0.5;
+                const tiltZ = (Math.random() - 0.5) * 0.5;
+
+                for (let k = 0; k < sub; k++) {
+                    const y = Math.random() * h;
+                    const side = Math.floor(Math.random() * 6);
+                    const ang = side / 6 * Math.PI * 2;
+                    pts.push({
+                        x: ox + w * Math.cos(ang) + y * tiltX,
+                        y: y - 200,
+                        z: oz + w * Math.sin(ang) + y * tiltZ
+                    });
+                }
+            }
+            return pts;
+        },
+
+        getTent: () => { // Triangular prism on ground
+            const pts = []; const L = 500; const W = 300; const H = 250;
+            for (let i = 0; i < config.count; i++) {
+                const z = (Math.random() - 0.5) * L; // Length
+                // Triangle profile in XY
+                const t = Math.random();
+                const x = (t - 0.5) * W;
+                const y = H * (1 - Math.abs(x) / (W / 2)) - H / 2;
+                const onSurface = Math.random() > 0.1;
+                if (onSurface) pts.push({ x, y, z });
+                else pts.push({ x: x * Math.random(), y: y * Math.random(), z });
+            }
+            return pts;
+        },
+
+        getPillow: () => { // Superellipsoid flat
+            const pts = []; const a = 300; const b = 50; const c = 250; const e = 0.2; // sharpness
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2 - Math.PI;
+                const v = Math.random() * Math.PI - Math.PI / 2;
+
+                const cu = Math.sign(Math.cos(u)) * Math.pow(Math.abs(Math.cos(u)), e);
+                const su = Math.sign(Math.sin(u)) * Math.pow(Math.abs(Math.sin(u)), e);
+                const cv = Math.sign(Math.cos(v)) * Math.pow(Math.abs(Math.cos(v)), e);
+                const sv = Math.sign(Math.sin(v)) * Math.pow(Math.abs(Math.sin(v)), e);
+
+                pts.push({ x: a * cu * cv, y: b * sv, z: c * su * cv });
+            }
+            return pts;
+        },
+
+        getBanana: () => {
+            const pts = []; const L = 500;
+            for (let i = 0; i < config.count; i++) {
+                const t = (i / config.count) * Math.PI * 0.8 - 0.4 * Math.PI; // arc
+                const r = 60 * (1 - Math.pow(2 * t / Math.PI, 2)); // taper ends
+                const ang = Math.random() * Math.PI * 2;
+                const cx = 400 * Math.sin(t);
+                const cy = 400 * (1 - Math.cos(t)) - 100;
+
+                pts.push({
+                    x: cx + r * Math.cos(ang),
+                    y: cy + r * Math.sin(ang),
+                    z: 0 + r * Math.sin(ang) // slightly flatten?
+                });
+            }
+            return pts;
+        },
+
+        getMelon: () => {
+            const pts = []; const R = 250;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.random() * Math.PI;
+                // Stripes?
+                const inStripe = Math.sin(u * 10) > 0;
+                const r = R + (inStripe ? 5 : -2);
+                pts.push({
+                    x: r * Math.sin(v) * Math.cos(u),
+                    y: r * Math.cos(v) * 1.2, // Elongate
+                    z: r * Math.sin(v) * Math.sin(u)
+                });
+            }
+            return pts;
+        },
+
+        getLemon: () => {
+            const pts = []; const R = 200;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.random() * Math.PI;
+                const y = R * 1.5 * Math.cos(v);
+                // Taper points
+                const pinch = 1 - Math.pow(Math.abs(Math.cos(v)), 3); // Sharp ends
+                const r = R * Math.sin(v); // * pinch?
+
+                pts.push({
+                    x: r * Math.cos(u),
+                    y: y,
+                    z: r * Math.sin(u)
+                });
+            }
+            return pts;
+        },
+
+        // Batch 3 Methods
+        getTrefoil: () => {
+            const pts = [];
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 2 * Math.PI;
+                const r = 2 + 0.5 * Math.cos(3 * t); // Tube radius var?
+                // Standard knot
+                const x = Math.sin(t) + 2 * Math.sin(2 * t);
+                const y = Math.cos(t) - 2 * Math.cos(2 * t);
+                const z = -Math.sin(3 * t);
+                const scale = 100;
+                pts.push({ x: x * scale, y: z * scale, z: y * scale }); // Swap YZ for flat
+            }
+            return pts;
+        },
+        getFigure8: () => {
+            const pts = []; const R = 300;
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 2 * Math.PI;
+                const x = R * Math.sin(t);
+                const z = R * Math.sin(t) * Math.cos(t);
+                const y = R * Math.sin(t) * 0.2; // Slight twist
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+        getLissajous: () => {
+            const pts = []; const R = 300;
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 2 * Math.PI * 10; // multiple cycles
+                const x = R * Math.sin(3 * t + Math.PI / 2);
+                const y = R * Math.sin(2 * t);
+                const z = R * Math.sin(4 * t + Math.PI);
+                pts.push({ x, y, z });
+            }
+            return pts;
+        },
+        getOloid: () => {
+            const pts = []; const R = 200;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * 2 * Math.PI; // Surface param?
+                // Convex hull of 2 circles... Let's use simple parametric or point cloud
+                // x = sin(t)/(1+cos(t)) ... complicated.
+                // Simplified: Two perpendicular disks blended?
+                // Let's do a loose approximation or just the frame
+                const t = i / config.count * 2 * Math.PI;
+                // Circle 1
+                if (i < config.count / 2) {
+                    pts.push({ x: R * Math.cos(t) - R / 2, y: R * Math.sin(t), z: 0 });
+                } else { // Circle 2 perp
+                    pts.push({ x: R / 2, y: R * Math.cos(t), z: R * Math.sin(t) });
+                }
+                // Hull filling is hard simply.
+            }
+            return pts;
+        },
+        getRocket: () => {
+            const pts = [];
+            const body = Math.floor(config.count * 0.6);
+            for (let i = 0; i < body; i++) {
+                const y = (Math.random() - 0.5) * 400;
+                const r = 60 * (1 - Math.pow((y - 100) / 300, 2)); // Bulge
+                const u = Math.random() * Math.PI * 2;
+                pts.push({ x: r * Math.cos(u), y: y, z: r * Math.sin(u) });
+            }
+            // Fins
+            for (let i = 0; i < config.count - body; i++) {
+                const f = Math.floor(i / ((config.count - body) / 3)); // 3 fins
+                const ang = f * (Math.PI * 2 / 3);
+                const r = 60 + Math.random() * 80;
+                const y = -150 - Math.random() * 100;
+                pts.push({ x: r * Math.cos(ang), y, z: r * Math.sin(ang) });
+            }
+            return pts;
+        },
+        getTree: () => {
+            const pts = [];
+            // Cone layers
+            const levels = 4;
+            for (let i = 0; i < config.count; i++) {
+                const l = Math.floor(Math.random() * levels);
+                const yBase = l * 100 - 150;
+                const h = 150;
+                const yRel = Math.random() * h;
+                const rMax = 120 * (1 - l / levels);
+                const r = rMax * (1 - yRel / h);
+                const u = Math.random() * Math.PI * 2;
+                pts.push({ x: r * Math.cos(u), y: yBase + yRel, z: r * Math.sin(u) });
+            }
+            return pts;
+        },
+        getSnowman: () => {
+            const pts = [];
+            const balls = 3;
+            for (let i = 0; i < config.count; i++) {
+                const b = Math.floor(Math.random() * balls);
+                let y, r;
+                if (b === 0) { y = -150; r = 120; }
+                else if (b === 1) { y = 50; r = 90; }
+                else { y = 180; r = 60; }
+
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.random() * Math.PI;
+                const rad = Math.sqrt(Math.random()) * r;
+                pts.push({
+                    x: rad * Math.sin(v) * Math.cos(u),
+                    y: y + rad * Math.cos(v),
+                    z: rad * Math.sin(v) * Math.sin(u)
+                });
+            }
+            return pts;
+        },
+        getDumbbell: () => {
+            const pts = [];
+            const barCount = Math.floor(config.count * 0.2);
+            // Bar
+            for (let i = 0; i < barCount; i++) {
+                const x = (Math.random() - 0.5) * 400;
+                const r = 20;
+                const u = Math.random() * Math.PI * 2;
+                pts.push({ x, y: r * Math.cos(u), z: r * Math.sin(u) });
+            }
+            // Weights
+            for (let i = 0; i < config.count - barCount; i++) {
+                const xSig = (i % 2 === 0) ? 1 : -1;
+                const cx = xSig * 220;
+                const R = 80;
+                const u = Math.random() * Math.PI * 2;
+                const v = Math.random() * Math.PI;
+                const r = Math.sqrt(Math.random()) * R;
+                pts.push({
+                    x: cx + r * Math.sin(v) * Math.cos(u),
+                    y: r * Math.cos(v),
+                    z: r * Math.sin(v) * Math.sin(u)
+                })
+            }
+            return pts;
+        },
+        getChair: () => {
+            const pts = []; const s = 200;
+            // Back, Seat, Legs
+            for (let i = 0; i < config.count; i++) {
+                const part = Math.random();
+                if (part < 0.3) { // Seat
+                    pts.push({ x: (Math.random() - 0.5) * s, y: 0, z: (Math.random() - 0.5) * s });
+                } else if (part < 0.6) { // Back
+                    pts.push({ x: (Math.random() - 0.5) * s, y: Math.random() * s, z: -s / 2 });
+                } else { // Legs
+                    const lx = Math.random() > 0.5 ? s / 2 - 10 : -s / 2 + 10;
+                    const lz = Math.random() > 0.5 ? s / 2 - 10 : -s / 2 + 10;
+                    const h = -Math.random() * s;
+                    pts.push({ x: lx, y: h, z: lz });
+                }
+            }
+            return pts;
+        },
+        getTable: () => {
+            const pts = []; const W = 400; const D = 250; const H = 200;
+            for (let i = 0; i < config.count; i++) {
+                if (Math.random() < 0.7) { // Top
+                    pts.push({ x: (Math.random() - 0.5) * W, y: H, z: (Math.random() - 0.5) * D });
+                } else { // Legs
+                    const lx = Math.random() > 0.5 ? W / 2 - 20 : -W / 2 + 20;
+                    const lz = Math.random() > 0.5 ? D / 2 - 20 : -D / 2 + 20;
+                    pts.push({ x: lx, y: Math.random() * H, z: lz });
+                }
+            }
+            return pts;
+        },
+        getFloor: () => {
+            const pts = []; const S = 1000;
+            for (let i = 0; i < config.count; i++) {
+                pts.push({ x: (Math.random() - 0.5) * S, y: -200, z: (Math.random() - 0.5) * S });
+            }
+            return pts;
+        },
+        getWall: () => {
+            const pts = []; const S = 800;
+            for (let i = 0; i < config.count; i++) {
+                pts.push({ x: (Math.random() - 0.5) * S, y: (Math.random() - 0.5) * S, z: -200 });
+            }
+            return pts;
+        },
+        getCorner: () => {
+            const pts = []; const S = 600;
+            for (let i = 0; i < config.count; i++) {
+                if (Math.random() > 0.5) // Wall 1
+                    pts.push({ x: -S / 2, y: (Math.random() - 0.5) * S, z: (Math.random() - 0.5) * S });
+                else // Wall 2
+                    pts.push({ x: (Math.random() - 0.5) * S, y: (Math.random() - 0.5) * S, z: -S / 2 });
+            }
+            return pts;
+        },
+        getCross3D: () => {
+            const pts = []; const L = 400; const w = 60;
+            for (let i = 0; i < config.count; i++) {
+                const axis = Math.floor(Math.random() * 3);
+                if (axis === 0) pts.push({ x: (Math.random() - 0.5) * L, y: (Math.random() - 0.5) * w, z: (Math.random() - 0.5) * w });
+                else if (axis === 1) pts.push({ x: (Math.random() - 0.5) * w, y: (Math.random() - 0.5) * L, z: (Math.random() - 0.5) * w });
+                else pts.push({ x: (Math.random() - 0.5) * w, y: (Math.random() - 0.5) * w, z: (Math.random() - 0.5) * L });
+            }
+            return pts;
+        },
+        getRing: () => { // Flat annulus
+            const pts = []; const R = 300; const r = 200;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const rad = r + Math.sqrt(Math.random()) * (R - r);
+                pts.push({ x: rad * Math.cos(u), y: 0, z: rad * Math.sin(u) });
+            }
+            return pts;
+        },
+        getDisc: () => {
+            const pts = []; const R = 300;
+            for (let i = 0; i < config.count; i++) {
+                const u = Math.random() * Math.PI * 2;
+                const rad = Math.sqrt(Math.random()) * R;
+                pts.push({ x: rad * Math.cos(u), y: 0, z: rad * Math.sin(u) });
+            }
+            return pts;
+        },
+        getFrame: () => { // Cube edges
+            const pts = []; const S = 300;
+            for (let i = 0; i < config.count; i++) {
+                const edge = Math.floor(Math.random() * 12);
+                const t = (Math.random() - 0.5) * S;
+                // 12 edges
+                // bit mask logic or plain code
+                // Simple: 3 axes * 4 lines
+                const ax = Math.floor(edge / 4);
+                const k = edge % 4;
+                const p = (k & 1) ? S / 2 : -S / 2;
+                const q = (k & 2) ? S / 2 : -S / 2;
+                if (ax === 0) pts.push({ x: t, y: p, z: q });
+                else if (ax === 1) pts.push({ x: p, y: t, z: q });
+                else pts.push({ x: p, y: q, z: t });
+            }
+            return pts;
+        },
+        getTarget: () => { // Concentric rings flat
+            const pts = []; const R = 350; const rings = 5;
+            for (let i = 0; i < config.count; i++) {
+                const rIdx = Math.floor(Math.random() * rings);
+                const r = ((rIdx + 1) / rings) * R;
+                const u = Math.random() * Math.PI * 2;
+                pts.push({ x: r * Math.cos(u), y: 0, z: r * Math.sin(u) });
+            }
+            return pts;
+        },
+        getSwirl: () => {
+            const pts = []; const R = 350;
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 6 * Math.PI;
+                const r = (t / (6 * Math.PI)) * R;
+                pts.push({ x: r * Math.cos(t), y: 0, z: r * Math.sin(t) });
+            }
+            return pts;
+        },
+        getInfinity: () => {
+            const pts = []; const R = 300;
+            for (let i = 0; i < config.count; i++) {
+                const t = i / config.count * 2 * Math.PI;
+                const d = 1 + Math.sin(t) * Math.sin(t);
+                const x = R * Math.cos(t) / d;
+                const z = R * Math.cos(t) * Math.sin(t) / d;
+                pts.push({ x, y: 0, z });
+            }
+            return pts;
+        }
+
+    };
+
+    // --- Core Simulations ---
+    class SpatialHash3D {
+        constructor(cellSize) {
+            this.cellSize = cellSize;
+            this.grid = new Map();
+        }
+        key(p) { return `${Math.floor(p.x / this.cellSize)},${Math.floor(p.y / this.cellSize)},${Math.floor(p.z / this.cellSize)}`; }
+        clear() { this.grid.clear(); }
+        add(p) {
+            const k = this.key(p);
+            if (!this.grid.has(k)) this.grid.set(k, []);
+            this.grid.get(k).push(p);
+        }
+        getNeighbors(p, arr) {
+            const cx = Math.floor(p.x / this.cellSize);
+            const cy = Math.floor(p.y / this.cellSize);
+            const cz = Math.floor(p.z / this.cellSize);
+            for (let x = -1; x <= 1; x++) {
+                for (let y = -1; y <= 1; y++) {
+                    for (let z = -1; z <= 1; z++) {
+                        const k = `${cx + x},${cy + y},${cz + z}`;
+                        if (this.grid.has(k)) {
+                            const cell = this.grid.get(k);
+                            for (let o of cell) arr.push(o);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    class Particle {
+        constructor(type) {
+            this.type = type;
+            const s = config.worldSize;
+            this.x = (Math.random() - 0.5) * s;
+            this.y = (Math.random() - 0.5) * s;
+            this.z = (Math.random() - 0.5) * s;
+            this.vx = 0; this.vy = 0; this.vz = 0;
+        }
+        update(s, dt, useBoundary = true) {
+            this.x += this.vx * dt * config.timeScale;
+            this.y += this.vy * dt * config.timeScale;
+            this.z += this.vz * dt * config.timeScale;
+
+            if (useBoundary) {
+                const box = s / 2;
+                if (config.boundary === 'wrap') {
+                    if (this.x < -box) this.x += s; if (this.x >= box) this.x -= s;
+                    if (this.y < -box) this.y += s; if (this.y >= box) this.y -= s;
+                    if (this.z < -box) this.z += s; if (this.z >= box) this.z -= s;
+                } else {
+                    if (this.x < -box) { this.x = -box; this.vx *= -1; } if (this.x > box) { this.x = box; this.vx *= -1; }
+                    if (this.y < -box) { this.y = -box; this.vy *= -1; } if (this.y > box) { this.y = box; this.vy *= -1; }
+                    if (this.z < -box) { this.z = -box; this.vz *= -1; } if (this.z > box) { this.z = box; this.vz *= -1; }
+                }
+            }
+            this.vx *= config.friction;
+            this.vy *= config.friction;
+            this.vz *= config.friction;
+        }
+    }
+
+    // --- Init ---
+    function initThree() {
+        scene = new THREE.Scene();
+        const bgCol = 0x252525;
+        scene.fog = new THREE.FogExp2(bgCol, 0.0002); // Soft fog
+
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 50000);
+        camera.position.set(0, 600, 1400);
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(bgCol);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        controls = new OrbitControls(camera, canvas);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = false; // Disable default to use custom smooth zoom
+        controls.rotateSpeed = 1.0;
+        controls.minDistance = 10;
+        controls.maxDistance = 5000;
+        controls.autoRotate = false;
+        controls.minPolarAngle = 0; // Look from top
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't go below floor (approx)
+
+        // Init Target Zoom
+        targetZoom = camera.position.distanceTo(controls.target);
+
+        // Custom Zoom Handler
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const amount = e.deltaY * 0.5; // Sensitivity
+            targetZoom += amount;
+            targetZoom = Math.max(controls.minDistance, Math.min(controls.maxDistance, targetZoom));
+        }, { passive: false });
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        dirLight.position.set(500, 1000, 500);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 5000;
+        const shadowSize = 2500;
+        dirLight.shadow.camera.left = -shadowSize;
+        dirLight.shadow.camera.right = shadowSize;
+        dirLight.shadow.camera.top = shadowSize;
+        dirLight.shadow.camera.bottom = -shadowSize;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        // Floor
+        const floorGeo = new THREE.PlaneGeometry(20000, 20000);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: bgCol,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+        floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -400;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Particles
+        const geometry = new THREE.SphereGeometry(6, 16, 16); // Larger, higher quality for shadows
+        const material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.3,
+            metalness: 0.4
+        });
+        instancedMesh = new THREE.InstancedMesh(geometry, material, MAX_INSTANCES);
+        instancedMesh.castShadow = true;
+        instancedMesh.receiveShadow = true;
+        instancedMesh.frustumCulled = false;
+        scene.add(instancedMesh);
+
+        const renderScene = new RenderPass(scene, camera);
+        bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        bloomPass.threshold = 0.5; // Higher threshold for standard material
+        bloomPass.strength = config.bloomStrength;
+        composer = new EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+    }
+
+    function initParticles() {
+        PARTICLES = [];
+        for (let i = 0; i < config.count; i++) PARTICLES.push(new Particle(Math.floor(Math.random() * config.types)));
+        spatialHash = new SpatialHash3D(config.radius);
+        instancedMesh.count = config.count;
+        updateColors();
+    }
+
+
+
+    // --- Physics ---
+    function updatePhysics() {
+        // Gravity Mode Override
+        if (config.gravityMode) {
+            const floorLevel = -400 + config.particleSize * 6 * 0.5; // Visual floor y + radius approx
+            for (let i = 0; i < PARTICLES.length; i++) {
+                const p = PARTICLES[i];
+                // Gravity
+                p.vy -= config.gravity;
+                // Air resistance
+                p.vx *= 0.99; p.vz *= 0.99;
+
+                // Integ
+                p.x += p.vx * config.dt;
+                p.y += p.vy * config.dt;
+                p.z += p.vz * config.dt;
+
+                // Floor Collision
+                if (p.y < floorLevel) {
+                    p.y = floorLevel;
+                    p.vy *= -0.5; // Damped bounce (energy loss)
+
+                    // Friction
+                    p.vx *= 0.8;
+                    p.vz *= 0.8;
+
+                    // Scatter: Only if high energy impact
+                    const impact = Math.abs(p.vy);
+                    if (impact > 2.0) {
+                        p.vx += (Math.random() - 0.5) * impact * 0.5;
+                        p.vz += (Math.random() - 0.5) * impact * 0.5;
+                    }
+
+                    // Resting logic
+                    if (impact < 1.0) {
+                        p.vy = 0;
+                        p.y = floorLevel;
+                        p.vx *= 0.5; p.vz *= 0.5; // Stop faster
+                    }
+                    p.landed = true; // Mark as landed when hitting the floor
+                } else {
+                    p.landed = false; // Not on the floor
+                }
+
+                // Walls removed
+            }
+
+            // Particle-Particle Collisions (Stacking)
+            // Reuse SpatialHash for performance
+            const collisionRadius = config.particleSize * 6 * 2.0; // Diameter
+            const r2 = collisionRadius * collisionRadius;
+
+            // Rebuild hash
+            if (spatialHash.cellSize !== collisionRadius) spatialHash = new SpatialHash3D(collisionRadius);
+            else spatialHash.clear();
+            for (let p of PARTICLES) spatialHash.add(p);
+
+            for (let i = 0; i < PARTICLES.length; i++) {
+                const a = PARTICLES[i];
+                const neighbors = [];
+                spatialHash.getNeighbors(a, neighbors);
+                for (let b of neighbors) {
+                    if (a === b) continue;
+
+                    // SMART COLLISION: Only collide if one of them has 'landed' (entered the pile)
+                    // This prevents shapes from exploding in mid-air
+                    if (!a.landed && !b.landed) continue;
+
+                    const dx = a.x - b.x;
+                    const dy = a.y - b.y;
+                    const dz = a.z - b.z;
+                    const d2 = dx * dx + dy * dy + dz * dz;
+
+                    if (d2 > 0 && d2 < r2) {
+                        const dist = Math.sqrt(d2);
+                        const push = (collisionRadius - dist) * 0.5; // Half overlap
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        const nz = dz / dist;
+
+                        // Propagate grounded state on contact
+                        a.landed = true;
+                        b.landed = true;
+
+                        // Move apart
+                        a.x += nx * push; a.y += ny * push; a.z += nz * push;
+                        b.x -= nx * push; b.y -= ny * push; b.z -= nz * push;
+
+                        // NO FRICTION - Let them slide!
+                        // Removed artificial instability to prevent 'exploding' piles.
+                        // Particles will simply push apart based on geometry.
+
+                        /*
+                        if (Math.abs(ny) > 0.5) {
+                            const slip = 0.5;
+                            a.vx += (Math.random() - 0.5) * slip; a.vz += (Math.random() - 0.5) * slip;
+                            b.vx -= (Math.random() - 0.5) * slip; b.vz -= (Math.random() - 0.5) * slip;
+                        }
+                        */
+                    }
+                }
+            }
+        } else if (TARGETS.length > 0) {
+            // Pure Formation Mode
+            for (let i = 0; i < PARTICLES.length; i++) {
+                const a = PARTICLES[i];
+                const tidx = i % TARGETS.length;
+                const tgt = TARGETS[tidx];
+                const dx = tgt.x - a.x;
+                const dy = tgt.y - a.y;
+                const dz = tgt.z - a.z;
+                const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (d > 1) {
+                    const s = 0.05 * config.formationStrength;
+                    a.vx += dx * s; a.vy += dy * s; a.vz += dz * s;
+                }
+                a.vx *= 0.80; a.vy *= 0.80; a.vz *= 0.80;
+                a.landed = false; // Reset landed
+            }
+            // NO BOUNDARY CHECK when forming shapes!
+            for (let p of PARTICLES) p.update(config.worldSize, config.dt, false);
+
+        } else {
+            // ... (Spatial Hash & Rules Loop) ...
+            if (spatialHash.cellSize !== config.radius) spatialHash = new SpatialHash3D(config.radius);
+            else spatialHash.clear();
+            for (let p of PARTICLES) spatialHash.add(p);
+
+            const r2 = config.radius * config.radius;
+            for (let i = 0; i < PARTICLES.length; i++) {
+                const a = PARTICLES[i];
+                const neighbors = [];
+                spatialHash.getNeighbors(a, neighbors);
+                for (let b of neighbors) {
+                    if (a === b) continue;
+                    let dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+                    if (config.boundary === 'wrap') {
+                        const s = config.worldSize;
+                        if (dx > s / 2) dx -= s; if (dx < -s / 2) dx += s;
+                        if (dy > s / 2) dy -= s; if (dy < -s / 2) dy += s;
+                        if (dz > s / 2) dz -= s; if (dz < -s / 2) dz += s;
+                    }
+                    const d2 = dx * dx + dy * dy + dz * dz;
+                    if (d2 > 0 && d2 < r2) {
+                        const d = Math.sqrt(d2);
+                        const q = d / config.radius;
+                        let f = 0;
+                        if (q < config.beta) f = (q / config.beta - 1) * 2.0;
+                        else if (config.beta < q && q < 1) f = RULES[a.type][b.type] * (1 - Math.abs(2 * (q - config.beta) / (1 - config.beta) - 1));
+                        f *= config.forceFactor;
+                        a.vx += (dx / d) * f; a.vy += (dy / d) * f; a.vz += (dz / d) * f;
+                    }
+                }
+                a.vx *= config.friction; a.vy *= config.friction; a.vz *= config.friction;
+                a.landed = false; // Reset landed
+            }
+            // Apply Boundary
+            for (let p of PARTICLES) p.update(config.worldSize, config.dt, true);
+        }
+
+        for (let i = 0; i < config.count; i++) {
+            const p = PARTICLES[i];
+            dummy.position.set(p.x, p.y, p.z);
+            const s = config.particleSize;
+            dummy.scale.set(s, s, s);
+            dummy.updateMatrix();
+            instancedMesh.setMatrixAt(i, dummy.matrix);
+        }
+        instancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // --- UI ---
+    function createMatrixUI() {
+        const c = $('matrix-container');
+        c.innerHTML = '';
+        c.style.gridTemplateColumns = `15px repeat(${config.types}, 1fr)`;
+        c.appendChild(document.createElement('div'));
+        for (let i = 0; i < config.types; i++) {
+            const d = document.createElement('div');
+            d.className = 'matrix-header-col';
+            d.style.backgroundColor = COLORS_STR[i];
+            c.appendChild(d);
+        }
+        for (let i = 0; i < config.types; i++) {
+            const d = document.createElement('div');
+            d.className = 'matrix-header-row';
+            d.style.backgroundColor = COLORS_STR[i];
+            const w = document.createElement('div');
+            w.style.position = 'relative'; w.style.height = '20px';
+            w.appendChild(d);
+            c.appendChild(w);
+            for (let j = 0; j < config.types; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'matrix-cell';
+                const inp = document.createElement('input');
+                inp.type = 'range'; inp.min = -1; inp.max = 1; inp.step = 0.1; inp.value = RULES[i][j];
+                inp.oninput = e => { RULES[i][j] = parseFloat(e.target.value); $('preset-selector').value = 'random'; };
+                cell.appendChild(inp);
+                c.appendChild(cell);
+            }
+        }
+    }
+
+    // Binds
+    const bind = (id, k, d) => $(id).oninput = e => {
+        config[k] = parseFloat(e.target.value);
+        if (d) $(d).innerText = config[k];
+        if (k === 'count') initParticles();
+        if (k === 'bloomStrength') bloomPass.strength = config[k];
+    };
+    bind('param-bloom', 'bloomStrength', 'bloom-val');
+    bind('param-form', 'formationStrength', 'form-val');
+    bind('param-count', 'count', 'count-val');
+    bind('param-force', 'forceFactor', 'force-val');
+    bind('param-radius', 'radius', 'radius-val');
+    bind('param-friction', 'friction', 'friction-val');
+    bind('param-size', 'particleSize', 'size-val');
+
+    // Studio Controls
+    $('check-shadows').onchange = (e) => {
+        const v = e.target.checked;
+        if (dirLight) dirLight.castShadow = v;
+        // if (floor) floor.visible = v; // Keep floor, just remove shadow casting? Or maybe user wants floor gone too? Let's generic approach: just light shadow.
+    };
+
+    $('check-gravity').onchange = (e) => {
+        config.gravityMode = e.target.checked;
+        if (config.gravityMode) {
+            // Optional: Give them a little shove?
+        }
+    };
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+        // Ctrl + D: Toggle Drop
+        if (e.ctrlKey && (e.key === 'd' || e.key === 'D')) {
+            e.preventDefault(); // Stop bookmark
+            config.gravityMode = !config.gravityMode;
+            $('check-gravity').checked = config.gravityMode;
+        }
+        // R: Respawn
+        if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey) {
+            initParticles();
+            TARGETS = []; ORIGINAL_TARGETS = []; setActiveShape(null);
+        }
+        // Space: Pause
+        if (e.code === 'Space') {
+            e.preventDefault(); // Stop scrolling
+            config.timeScale = config.timeScale === 0 ? 1.0 : 0.0;
+        }
+    });
+
+    $('param-thick').oninput = (e) => {
+        config.thickness = parseFloat(e.target.value);
+        $('thick-val').innerText = config.thickness;
+        applyThickness();
+    };
+
+    function applyThickness() {
+        if (ORIGINAL_TARGETS.length === 0) return;
+        TARGETS = ORIGINAL_TARGETS.map(t => ({
+            x: t.x + (Math.random() - 0.5) * config.thickness * 2,
+            y: t.y + (Math.random() - 0.5) * config.thickness * 2,
+            z: t.z + (Math.random() - 0.5) * config.thickness * 2
+        }));
+    }
+
+    const PRESETS = {
+        'snake': { radius: 60, friction: 0.85, force: 2.0, beta: 0.2, matrix: [[0.8, -0.4, 0.2, -0.5], [0.2, 0.7, -0.5, 0.3], [-0.5, 0.3, 0.6, -0.2], [0.1, -0.2, 0.5, 0.9]] },
+        'life': { radius: 35, friction: 0.88, force: 1.2, beta: 0.3, matrix: [[1, 0.5, -0.1, -0.1], [-0.1, 1, 0.5, -0.1], [-0.1, -0.1, 1, 0.5], [0.5, -0.1, -0.1, 1]] },
+        'cell': { radius: 20, friction: 0.75, force: 3.5, beta: 0.25, matrix: [[1, -0.5, 0, 0], [0, 1, -0.5, 0], [0, 0, 1, -0.5], [-0.5, 0, 0, 1]] },
+        'swarm': { radius: 80, friction: 0.94, force: 0.5, beta: 0.1, matrix: [[0.2, 0.2, 0.2, 0.2], [0.2, 0.2, 0.2, 0.2], [0.2, 0.2, 0.2, 0.2], [0.2, 0.2, 0.2, 0.2]] },
+        'galaxy': { radius: 100, friction: 0.96, force: 1.0, beta: 0.2, matrix: [[0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5], [0.5, 0.5, 0.5, 0.5]] }
+    };
+
+    $('preset-selector').onchange = (e) => {
+        const p = PRESETS[e.target.value];
+        if (!p) return;
+        Object.assign(config, { radius: p.radius, friction: p.friction, forceFactor: p.force, beta: p.beta });
+        $('param-radius').value = p.radius; $('radius-val').innerText = p.radius;
+        $('param-friction').value = p.friction; $('friction-val').innerText = p.friction;
+        $('param-force').value = p.force; $('force-val').innerText = p.force;
+        RULES = p.matrix.map(row => [...row]);
+        createMatrixUI(); initParticles();
+    };
+
+    // Colors
+    [0, 1, 2, 3].forEach(i => {
+        $(`col-${i}`).oninput = (e) => {
+            COLORS_STR[i] = e.target.value;
+            updateColors();
+            createMatrixUI();
+        };
+    });
+
+    const toggleGlobal = $('check-global-color');
+    const colGlobal = $('col-global');
+
+    toggleGlobal.onchange = (e) => {
+        colGlobal.style.display = e.target.checked ? 'block' : 'none';
+        $('type-colors-container').style.display = e.target.checked ? 'none' : 'block';
+        updateColors();
+    };
+
+    colGlobal.oninput = () => updateColors();
+
+    function updateColors() {
+        const isGlobal = toggleGlobal.checked;
+        const globalC = new THREE.Color(colGlobal.value);
+        THREE_COLORS = COLORS_STR.map(c => new THREE.Color(c));
+
+        const count = Math.min(config.count, PARTICLES.length);
+        for (let i = 0; i < count; i++) {
+            if (!PARTICLES[i]) continue;
+            if (isGlobal) {
+                instancedMesh.setColorAt(i, globalC);
+            } else {
+                instancedMesh.setColorAt(i, THREE_COLORS[PARTICLES[i].type]);
+            }
+        }
+        instancedMesh.instanceColor.needsUpdate = true;
+    }
+
+    // Shapes
+
+    // Helper to manage active state
+    function setActiveShape(btnId) {
+        // Remove active class from all buttons in btn-grid
+        document.querySelectorAll('.btn-grid button').forEach(b => b.classList.remove('active-shape'));
+        // Add to clicked
+        if (btnId) $(btnId).classList.add('active-shape');
+    }
+
+    // Helper bind
+    const bindShape = (id, fn) => {
+        $(id).onclick = () => {
+            config.gravityMode = false;
+            $('check-gravity').checked = false;
+            ORIGINAL_TARGETS = fn();
+            applyThickness();
+            setActiveShape(id);
+        };
+    };
+
+    $('btn-text').onclick = () => {
+        if ($('text-input').value) {
+            config.gravityMode = false;
+            $('check-gravity').checked = false;
+            ORIGINAL_TARGETS = ShapeEngine.scanText($('text-input').value);
+            applyThickness();
+            setActiveShape('btn-text');
+        }
+    };
+
+    $('text-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') $('btn-text').click();
+    });
+
+    bindShape('btn-shape-sphere', ShapeEngine.getSphere);
+    bindShape('btn-shape-cube', ShapeEngine.getCube);
+    bindShape('btn-shape-heart', ShapeEngine.getHeart);
+    bindShape('btn-shape-torus', ShapeEngine.getTorus);
+    bindShape('btn-shape-pyramid', ShapeEngine.getPyramid);
+    bindShape('btn-shape-helix', ShapeEngine.getHelix);
+    bindShape('btn-shape-cylinder', ShapeEngine.getCylinder);
+    bindShape('btn-shape-saturn', ShapeEngine.getSaturn);
+    bindShape('btn-shape-hourglass', ShapeEngine.getHourglass);
+    bindShape('btn-shape-atom', ShapeEngine.getAtom);
+
+    // New Bindings
+    bindShape('btn-shape-klein', ShapeEngine.getKleinBottle);
+    bindShape('btn-shape-mobius', ShapeEngine.getMobiusStrip);
+    bindShape('btn-shape-torusknot', ShapeEngine.getTorusKnot);
+    bindShape('btn-shape-cone', ShapeEngine.getCone);
+    bindShape('btn-shape-dodec', ShapeEngine.getDodecahedron);
+    bindShape('btn-shape-icos', ShapeEngine.getIcosahedron);
+    bindShape('btn-shape-octa', ShapeEngine.getOctahedron);
+    bindShape('btn-shape-tetra', ShapeEngine.getTetrahedron);
+    bindShape('btn-shape-hyper', ShapeEngine.getHyperboloid);
+    bindShape('btn-shape-saddle', ShapeEngine.getSaddle);
+    bindShape('btn-shape-monkey', ShapeEngine.getMonkeySaddle);
+    bindShape('btn-shape-enneper', ShapeEngine.getEnneper);
+    bindShape('btn-shape-helicoid', ShapeEngine.getHelicoid);
+    bindShape('btn-shape-catenoid', ShapeEngine.getCatenoid);
+    bindShape('btn-shape-roman', ShapeEngine.getRoman);
+    bindShape('btn-shape-cross', ShapeEngine.getCrossCap);
+    bindShape('btn-shape-dini', ShapeEngine.getDini);
+    bindShape('btn-shape-corkscrew', ShapeEngine.getCorkscrew);
+    bindShape('btn-shape-wave', ShapeEngine.getWave);
+    bindShape('btn-shape-bumpy', ShapeEngine.getBumpy);
+
+    // Batch 2 Bindings
+    bindShape('btn-shape-supertoroid', ShapeEngine.getSuperToroid);
+    bindShape('btn-shape-nautilus', ShapeEngine.getNautilus);
+    bindShape('btn-shape-ufo', ShapeEngine.getUFO);
+    bindShape('btn-shape-mushroom', ShapeEngine.getMushroom);
+    bindShape('btn-shape-star', ShapeEngine.getStar);
+    bindShape('btn-shape-borromean', ShapeEngine.getBorromean);
+    bindShape('btn-shape-chain', ShapeEngine.getChain);
+    bindShape('btn-shape-gear', ShapeEngine.getGear);
+    bindShape('btn-shape-waffle', ShapeEngine.getWaffle);
+    bindShape('btn-shape-tunnel', ShapeEngine.getTunnel);
+    bindShape('btn-shape-vortex', ShapeEngine.getVortex);
+    bindShape('btn-shape-bowl', ShapeEngine.getBowl);
+    bindShape('btn-shape-cup', ShapeEngine.getCup);
+    bindShape('btn-shape-gem', ShapeEngine.getGem);
+    bindShape('btn-shape-crystal', ShapeEngine.getCrystal);
+    bindShape('btn-shape-tent', ShapeEngine.getTent);
+    bindShape('btn-shape-pillow', ShapeEngine.getPillow);
+    bindShape('btn-shape-banana', ShapeEngine.getBanana);
+    bindShape('btn-shape-melon', ShapeEngine.getMelon);
+    bindShape('btn-shape-lemon', ShapeEngine.getLemon);
+
+    // Batch 2 Bindings
+    bindShape('btn-shape-supertoroid', ShapeEngine.getSuperToroid);
+    bindShape('btn-shape-nautilus', ShapeEngine.getNautilus);
+    bindShape('btn-shape-ufo', ShapeEngine.getUFO);
+    bindShape('btn-shape-mushroom', ShapeEngine.getMushroom);
+    bindShape('btn-shape-star', ShapeEngine.getStar);
+    bindShape('btn-shape-borromean', ShapeEngine.getBorromean);
+    bindShape('btn-shape-chain', ShapeEngine.getChain);
+    bindShape('btn-shape-gear', ShapeEngine.getGear);
+    bindShape('btn-shape-waffle', ShapeEngine.getWaffle);
+    bindShape('btn-shape-tunnel', ShapeEngine.getTunnel);
+    bindShape('btn-shape-vortex', ShapeEngine.getVortex);
+    bindShape('btn-shape-bowl', ShapeEngine.getBowl);
+    bindShape('btn-shape-cup', ShapeEngine.getCup);
+    bindShape('btn-shape-gem', ShapeEngine.getGem);
+    bindShape('btn-shape-crystal', ShapeEngine.getCrystal);
+    bindShape('btn-shape-tent', ShapeEngine.getTent);
+    bindShape('btn-shape-pillow', ShapeEngine.getPillow);
+    bindShape('btn-shape-banana', ShapeEngine.getBanana);
+    bindShape('btn-shape-melon', ShapeEngine.getMelon);
+    bindShape('btn-shape-lemon', ShapeEngine.getLemon);
+
+    // Batch 3 Bindings
+    bindShape('btn-shape-trefoil', ShapeEngine.getTrefoil);
+    bindShape('btn-shape-figure8', ShapeEngine.getFigure8);
+    bindShape('btn-shape-lissajous', ShapeEngine.getLissajous);
+    bindShape('btn-shape-oloid', ShapeEngine.getOloid);
+    bindShape('btn-shape-rocket', ShapeEngine.getRocket);
+    bindShape('btn-shape-tree', ShapeEngine.getTree);
+    bindShape('btn-shape-snowman', ShapeEngine.getSnowman);
+    bindShape('btn-shape-dumbbell', ShapeEngine.getDumbbell);
+    bindShape('btn-shape-chair', ShapeEngine.getChair);
+    bindShape('btn-shape-table', ShapeEngine.getTable);
+    bindShape('btn-shape-floor', ShapeEngine.getFloor);
+    bindShape('btn-shape-wall', ShapeEngine.getWall);
+    bindShape('btn-shape-corner', ShapeEngine.getCorner);
+    bindShape('btn-shape-cross3d', ShapeEngine.getCross3D);
+    bindShape('btn-shape-ring', ShapeEngine.getRing);
+    bindShape('btn-shape-disc', ShapeEngine.getDisc);
+    bindShape('btn-shape-frame', ShapeEngine.getFrame);
+    bindShape('btn-shape-target', ShapeEngine.getTarget);
+    bindShape('btn-shape-swirl', ShapeEngine.getSwirl);
+    bindShape('btn-shape-infinity', ShapeEngine.getInfinity);
+
+    $('btn-shape-clear').onclick = () => { TARGETS = []; ORIGINAL_TARGETS = []; setActiveShape('btn-shape-clear'); };
+    $('btn-reset').onclick = () => { initParticles(); TARGETS = []; ORIGINAL_TARGETS = []; setActiveShape(null); };
+    $('btn-rules').onclick = () => { RULES = RULES.map(r => r.map(() => Math.random() * 2 - 1)); createMatrixUI(); $('preset-selector').value = 'random'; };
+
+    // Resize
+    window.onresize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight; // Actually logic is flawed, should check canvas parent?
+        // Since we use FLEX, just window width is fine for now as canvas fills logic.
+        // Wait, ui is fixed width.
+        const w = $('canvas-container').clientWidth;
+        const h = $('canvas-container').clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+        composer.setSize(w, h);
+    };
+
+    // Boot
+    initThree();
+    RULES = PRESETS['snake'].matrix.map(r => [...r]);
+    createMatrixUI();
+    initParticles();
+    window.onresize();
+
+    // Debug clean up
+    instancedMesh.frustumCulled = true;
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Custom Smooth Zoom Logic
+        const dist = camera.position.distanceTo(controls.target);
+        if (Math.abs(dist - targetZoom) > 0.1) {
+            const newDist = THREE.MathUtils.lerp(dist, targetZoom, 0.1);
+            camera.position.sub(controls.target).setLength(newDist).add(controls.target);
+        }
+
+        controls.update();
+        updatePhysics();
+        composer.render();
+        // Cheap fps
+        // $('fps').innerText = ...
+    }
+    animate();
+
+</script>
 </body>
+
 </html>
